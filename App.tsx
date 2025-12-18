@@ -25,7 +25,7 @@ const App: React.FC = () => {
   const [selectedIdea, setSelectedIdea] = useState<ProjectIdea | null>(null);
   const [proposal, setProposal] = useState<ProjectProposal | null>(null);
   const [hasKey, setHasKey] = useState<boolean>(true);
-  
+
   const [customCategories, setCustomCategories] = useState<string[]>([]);
 
   useEffect(() => {
@@ -251,52 +251,69 @@ const App: React.FC = () => {
     const worksheet = XLSX.utils.aoa_to_sheet(rows);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Budget");
-    XLSX.writeFile(workbook, `ATHAR_Budget_${proposal.title.substring(0,15)}.xlsx`);
+    XLSX.writeFile(workbook, `ATHAR_Budget_${proposal.title.substring(0, 15)}.xlsx`);
   };
 
   if (!hasKey) {
+    const [inputKey, setInputKey] = useState('');
+
+    const handleSaveKey = () => {
+      if (inputKey.trim().length > 10) {
+        localStorage.setItem('ATHAR_API_KEY', inputKey.trim());
+        setHasKey(true);
+        window.location.reload();
+      } else {
+        alert(lang === 'ar' ? 'يرجى إدخال مفتاح صحيح' : 'Please enter a valid key');
+      }
+    };
+
     return (
       <Layout>
         <div className="max-w-4xl mx-auto py-20 px-6">
           <div className="glass-card rounded-[3rem] p-12 md:p-20 border-t-8 border-[#B4975A] shadow-2xl animate-in zoom-in-95 duration-500">
             <div className="flex flex-col items-center text-center">
               <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center mb-10 border-2 border-red-100">
-                 <span className="text-4xl">🔑</span>
+                <span className="text-4xl">🔑</span>
               </div>
               <h2 className="text-4xl font-black text-[#1E1B4B] mb-6">{t.setupRequired}</h2>
-              <p className="text-slate-500 text-xl font-bold mb-12 max-w-xl">{t.setupDesc}</p>
-              
-              <div className="w-full text-right space-y-6 bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-inner">
+
+              <div className="w-full max-w-md mb-12">
+                <input
+                  type="password"
+                  value={inputKey}
+                  onChange={(e) => setInputKey(e.target.value)}
+                  placeholder={lang === 'ar' ? "أدخل مفتاح الـ API هنا..." : "Enter API Key here..."}
+                  className="w-full px-6 py-4 rounded-xl border-2 border-slate-200 focus:border-[#B4975A] outline-none mb-4 font-mono text-center"
+                />
+                <button
+                  onClick={handleSaveKey}
+                  className="w-full bg-[#B4975A] text-white py-4 rounded-xl font-black shadow-lg hover:brightness-110 mb-4"
+                >
+                  حفظ المفتاح ومتابعة ✅
+                </button>
+              </div>
+
+              <p className="text-slate-500 text-sm font-bold mb-8 max-w-xl">{t.setupDesc}</p>
+
+              <div className="w-full text-right space-y-4 bg-slate-50 p-8 rounded-[2rem] border border-slate-200 text-sm">
                 <p className="font-black text-[#1E1B4B] flex items-center gap-3">
-                  <span className="bg-[#B4975A] text-white w-8 h-8 rounded-full flex items-center justify-center text-sm">1</span>
+                  <span className="bg-[#B4975A] text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">1</span>
                   {t.setupStep1}
                 </p>
                 <p className="font-black text-[#1E1B4B] flex items-center gap-3">
-                  <span className="bg-[#B4975A] text-white w-8 h-8 rounded-full flex items-center justify-center text-sm">2</span>
+                  <span className="bg-[#B4975A] text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">2</span>
                   {t.setupStep2}
                 </p>
-                <p className="font-black text-[#1E1B4B] flex items-center gap-3">
-                  <span className="bg-[#B4975A] text-white w-8 h-8 rounded-full flex items-center justify-center text-sm">3</span>
-                  {t.setupStep3}
-                </p>
-                <div className="mr-12 p-4 bg-[#1E1B4B] rounded-2xl text-white font-mono text-sm inline-block shadow-lg">
-                  VITE_API_KEY
-                </div>
-                <p className="font-black text-[#1E1B4B] flex items-center gap-3">
-                  <span className="bg-[#B4975A] text-white w-8 h-8 rounded-full flex items-center justify-center text-sm">4</span>
-                  {t.setupStep4}
-                </p>
-                <p className="font-black text-red-600 flex items-center gap-3 bg-red-50 p-4 rounded-2xl">
-                  <span className="bg-red-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm">5</span>
-                  {t.setupStep5}
+                <p className="font-black text-[#1E1B4B] flex items-center gap-3 text-xs opacity-70">
+                  {t.setupStep3} (VITE_API_KEY)
                 </p>
               </div>
-              
-              <button 
+
+              <button
                 onClick={() => window.location.reload()}
-                className="mt-12 bg-[#1E1B4B] text-white px-12 py-5 rounded-2xl font-black shadow-xl hover:scale-105 transition-all"
+                className="mt-12 text-[#1E1B4B] font-black underline"
               >
-                تحديث الصفحة بعد الإعداد ↻
+                تحديث الصفحة ↻
               </button>
             </div>
           </div>
@@ -304,6 +321,7 @@ const App: React.FC = () => {
       </Layout>
     );
   }
+
 
   if (loading) {
     return (
@@ -320,7 +338,7 @@ const App: React.FC = () => {
     <Layout>
       <div className="max-w-6xl mx-auto py-8">
         <div className="flex justify-end mb-6 no-print">
-          <button 
+          <button
             onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')}
             className="bg-white/90 backdrop-blur px-8 py-3 rounded-2xl shadow-md border border-[#B4975A]/20 font-black text-[#1E1B4B] hover:bg-[#B4975A] hover:text-white transition-all transform hover:scale-105 active:scale-95"
           >
@@ -340,15 +358,15 @@ const App: React.FC = () => {
                 <div className="grid md:grid-cols-2 gap-10">
                   <div className="space-y-4">
                     <label className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">{t.country}</label>
-                    <input type="text" required value={country} onChange={(e) => setCountry(e.target.value)} 
-                           className="w-full px-8 py-6 rounded-[2rem] bg-white border-2 border-slate-100 outline-none font-black text-[#1E1B4B] shadow-inner focus:border-[#B4975A] transition-all" 
-                           placeholder={lang === 'ar' ? "مثلاً: اليمن، سوريا..." : "e.g. Yemen, Sudan..."} />
+                    <input type="text" required value={country} onChange={(e) => setCountry(e.target.value)}
+                      className="w-full px-8 py-6 rounded-[2rem] bg-white border-2 border-slate-100 outline-none font-black text-[#1E1B4B] shadow-inner focus:border-[#B4975A] transition-all"
+                      placeholder={lang === 'ar' ? "مثلاً: اليمن، سوريا..." : "e.g. Yemen, Sudan..."} />
                   </div>
                   <div className="space-y-4">
                     <label className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">{t.vision}</label>
-                    <input type="text" required value={vision} onChange={(e) => setVision(e.target.value)} 
-                           className="w-full px-8 py-6 rounded-[2rem] bg-white border-2 border-slate-100 outline-none font-black text-[#1E1B4B] shadow-inner focus:border-[#B4975A] transition-all" 
-                           placeholder={lang === 'ar' ? "وصف مختصر للمبادرة..." : "Short project description..."} />
+                    <input type="text" required value={vision} onChange={(e) => setVision(e.target.value)}
+                      className="w-full px-8 py-6 rounded-[2rem] bg-white border-2 border-slate-100 outline-none font-black text-[#1E1B4B] shadow-inner focus:border-[#B4975A] transition-all"
+                      placeholder={lang === 'ar' ? "وصف مختصر للمبادرة..." : "Short project description..."} />
                   </div>
                 </div>
                 <button type="submit" className="w-full bg-[#1E1B4B] text-white font-black py-8 rounded-[2.5rem] shadow-[0_20px_40px_-10px_rgba(30,27,75,0.4)] text-2xl hover:bg-[#2D2A5E] hover:scale-[1.02] transition-all active:scale-95 border-b-8 border-[#B4975A]">
@@ -367,8 +385,8 @@ const App: React.FC = () => {
             </div>
             <div className="grid md:grid-cols-2 gap-10">
               {ideas.map((idea) => (
-                <div key={idea.id} onClick={() => handleSelectIdea(idea)} 
-                     className="glass-card p-12 rounded-[3.5rem] shadow-2xl hover:border-[#B4975A] cursor-pointer border-2 border-transparent transition-all group relative overflow-hidden">
+                <div key={idea.id} onClick={() => handleSelectIdea(idea)}
+                  className="glass-card p-12 rounded-[3.5rem] shadow-2xl hover:border-[#B4975A] cursor-pointer border-2 border-transparent transition-all group relative overflow-hidden">
                   <span className="inline-block bg-[#1E1B4B] text-white text-[10px] font-black px-5 py-2 rounded-full mb-8 uppercase tracking-widest shadow-lg">{idea.sector}</span>
                   <h3 className="text-2xl font-black text-[#1E1B4B] mb-6 group-hover:text-[#B4975A] transition-colors">{idea.name}</h3>
                   <p className="text-slate-600 text-sm mb-10 leading-relaxed font-bold line-clamp-3">{idea.description}</p>
@@ -403,13 +421,13 @@ const App: React.FC = () => {
                     <h1 className="text-6xl font-black text-[#1E1B4B] mb-8 leading-tight">{proposal.title}</h1>
                   </header>
                   <section className="space-y-20">
-                      <article>
-                        <h3 className="text-3xl font-black text-[#1E1B4B] mb-8 flex items-center">
-                          <span className="w-12 h-12 bg-[#B4975A] text-white rounded-2xl flex items-center justify-center mr-4 ml-4 text-sm shadow-lg">01</span>
-                          {t.execSummary}
-                        </h3>
-                        <p className="text-slate-700 leading-relaxed text-justify text-2xl font-medium">{proposal.executiveSummary}</p>
-                      </article>
+                    <article>
+                      <h3 className="text-3xl font-black text-[#1E1B4B] mb-8 flex items-center">
+                        <span className="w-12 h-12 bg-[#B4975A] text-white rounded-2xl flex items-center justify-center mr-4 ml-4 text-sm shadow-lg">01</span>
+                        {t.execSummary}
+                      </h3>
+                      <p className="text-slate-700 leading-relaxed text-justify text-2xl font-medium">{proposal.executiveSummary}</p>
+                    </article>
                   </section>
                 </div>
               ) : (
