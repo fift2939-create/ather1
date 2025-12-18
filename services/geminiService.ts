@@ -1,14 +1,11 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { ProjectIdea, ProjectProposal } from "../types";
+import { ProjectIdea, ProjectProposal } from "../types.ts";
 
 // محاولة جلب المفتاح من كافة البيئات الممكنة
 export const getApiKey = () => {
-  // في Vite/Cloudflare Pages نستخدم import.meta.env
   const viteKey = (import.meta as any).env?.VITE_API_KEY;
-  // في بعض البيئات الأخرى نستخدم process.env
-  const processKey = typeof process !== 'undefined' ? process.env?.API_KEY : '';
-  
+  const processKey = typeof process !== 'undefined' ? (process as any).env?.API_KEY : '';
   return viteKey || processKey || "";
 };
 
@@ -64,30 +61,13 @@ export const generateFullProposal = async (
   customCategories?: string[]
 ): Promise<ProjectProposal> => {
   const ai = getAIClient();
-  
   const categories = customCategories && customCategories.length > 0 
     ? customCategories.join(", ")
     : (lang === 'ar' ? "الموظفين، المشتريات، المواصلات، الأنشطة، الإدارة" : "Staff, Procurement, Transport, Activities, Management");
 
   const prompt = lang === 'ar'
-    ? `أنت كبير مستشاري المنظمات الدولية. صغ مقترحاً احترافياً "كاملاً" لفكرة: "${selectedIdea.name}" في "${country}".
-      يجب أن يكون السرد مقنعاً جداً وشاملاً:
-      1. تحليل المشكلة: تفاصيل اجتماعية واقتصادية دقيقة.
-      2. نظرية التغيير: شرح عميق لكيفية تحويل المدخلات إلى أثر.
-      3. أهداف SMART: أرقام ونسب مئوية وتواريخ.
-      4. SWOT: تحليل داخلي وخارجي مفصل.
-      5. خطة M&E: مؤشرات أداء (KPIs)، أدوات (استبيانات، مقابلات)، وآلية تتبع.
-      6. الميزانية: تفصيل ممل (كمية، كلفة شهرية، تكرار) موزعة على: ${categories}.
-      الرد JSON حصراً بالعربية الرصينة.`
-    : `You are a Senior Consultant for International NGOs. Write a "full" professional proposal for: "${selectedIdea.name}" in "${country}".
-      The narrative must be highly persuasive and exhaustive:
-      1. Problem Analysis: Precise socio-economic details.
-      2. Theory of Change: Deep explanation of path to impact.
-      3. SMART Goals: Hard numbers, percentages, and deadlines.
-      4. SWOT: Detailed internal/external analysis.
-      5. M&E Plan: KPIs, tools (surveys, KIIs), and tracking mechanisms.
-      6. Budget: Extreme detail (qty, monthly cost, freq) distributed across: ${categories}.
-      Response must be JSON in English only.`;
+    ? `أنت كبير مستشاري المنظمات الدولية. صغ مقترحاً احترافياً "كاملاً" لفكرة: "${selectedIdea.name}" في "${country}". الرد JSON حصراً بالعربية.`
+    : `You are a Senior Consultant for International NGOs. Write a "full" professional proposal for: "${selectedIdea.name}" in "${country}". Response must be JSON in English only.`;
 
   const response = await ai.models.generateContent({
     model: 'gemini-3-pro-preview',

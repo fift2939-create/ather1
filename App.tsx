@@ -1,8 +1,8 @@
 
-import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Layout } from './components/Layout';
-import { Step, ProjectIdea, ProjectProposal, BudgetItem } from './types';
-import { generateProjectIdeas, generateFullProposal, getApiKey } from './services/geminiService';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Layout } from './components/Layout.tsx';
+import { Step, ProjectIdea, ProjectProposal, BudgetItem } from './types.ts';
+import { generateProjectIdeas, generateFullProposal, getApiKey } from './services/geminiService.ts';
 import * as docx from "docx";
 import FileSaver from "file-saver";
 import * as XLSX from "xlsx";
@@ -29,9 +29,12 @@ const App: React.FC = () => {
   const [customCategories, setCustomCategories] = useState<string[]>([]);
 
   useEffect(() => {
-    // تحقق من وجود المفتاح عند التحميل
-    const key = getApiKey();
-    setHasKey(!!key);
+    try {
+      const key = getApiKey();
+      setHasKey(!!key);
+    } catch (e) {
+      setHasKey(false);
+    }
   }, []);
 
   const t = {
@@ -136,7 +139,7 @@ const App: React.FC = () => {
       const suggestedIdeas = await generateProjectIdeas(vision, country, lang);
       setIdeas(suggestedIdeas);
       setStep(Step.Ideas);
-    } catch (error) { alert(lang === 'ar' ? 'خطأ في الاتصال' : 'Connection Error'); }
+    } catch (error) { alert(lang === 'ar' ? 'خطأ في الاتصال بمحرك الذكاء الاصطناعي' : 'AI Engine Connection Error'); }
     finally { setLoading(false); }
   };
 
@@ -148,7 +151,7 @@ const App: React.FC = () => {
       const fullProposal = await generateFullProposal(idea, country, lang, customCategories);
       setProposal(fullProposal);
       setStep(Step.Proposal);
-    } catch (error) { alert(lang === 'ar' ? 'خطأ في الصياغة' : 'Drafting Error'); }
+    } catch (error) { alert(lang === 'ar' ? 'خطأ في صياغة المقترح' : 'Drafting Error'); }
     finally { setLoading(false); }
   };
 
@@ -257,7 +260,7 @@ const App: React.FC = () => {
         <div className="max-w-4xl mx-auto py-20 px-6">
           <div className="glass-card rounded-[3rem] p-12 md:p-20 border-t-8 border-[#B4975A] shadow-2xl animate-in zoom-in-95 duration-500">
             <div className="flex flex-col items-center text-center">
-              <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center mb-10 border-2 border-red-100 animate-bounce">
+              <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center mb-10 border-2 border-red-100">
                  <span className="text-4xl">🔑</span>
               </div>
               <h2 className="text-4xl font-black text-[#1E1B4B] mb-6">{t.setupRequired}</h2>
@@ -331,13 +334,6 @@ const App: React.FC = () => {
               <div className="max-w-3xl mx-auto text-center">
                 <h2 className="text-5xl font-black text-[#1E1B4B] mb-4 tracking-tight">{t.welcome}</h2>
                 <p className="text-slate-500 font-bold mb-16 text-xl">{t.subWelcome}</p>
-                <div className="target-section p-8 rounded-[2.5rem] mb-16 text-right animate-in slide-in-from-right-10 duration-1000">
-                  <h3 className="text-2xl font-black text-[#1E1B4B] mb-4 flex items-center">
-                    <span className="target-icon-bounce mr-3 ml-3 text-3xl">🎯</span>
-                    {t.targetTitle}
-                  </h3>
-                  <p className="text-slate-600 text-lg leading-relaxed font-bold">{t.targetDesc}</p>
-                </div>
               </div>
 
               <form onSubmit={handleStartAnalysis} className="space-y-12 max-w-4xl mx-auto">
@@ -373,7 +369,6 @@ const App: React.FC = () => {
               {ideas.map((idea) => (
                 <div key={idea.id} onClick={() => handleSelectIdea(idea)} 
                      className="glass-card p-12 rounded-[3.5rem] shadow-2xl hover:border-[#B4975A] cursor-pointer border-2 border-transparent transition-all group relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#B4975A]/10 to-transparent rounded-bl-full transform translate-x-10 -translate-y-10 group-hover:translate-x-0 group-hover:translate-y-0 transition-transform"></div>
                   <span className="inline-block bg-[#1E1B4B] text-white text-[10px] font-black px-5 py-2 rounded-full mb-8 uppercase tracking-widest shadow-lg">{idea.sector}</span>
                   <h3 className="text-2xl font-black text-[#1E1B4B] mb-6 group-hover:text-[#B4975A] transition-colors">{idea.name}</h3>
                   <p className="text-slate-600 text-sm mb-10 leading-relaxed font-bold line-clamp-3">{idea.description}</p>
@@ -406,14 +401,8 @@ const App: React.FC = () => {
                 <div className="space-y-24 relative">
                   <header className="text-center pb-16 border-b-4 border-slate-50">
                     <h1 className="text-6xl font-black text-[#1E1B4B] mb-8 leading-tight">{proposal.title}</h1>
-                    <div className="flex flex-wrap justify-center gap-8 text-[11px] font-black uppercase tracking-[0.3em] text-[#B4975A]">
-                      <span className="bg-[#1E1B4B] text-white px-4 py-1 rounded-lg">{country}</span>
-                      <span className="self-center opacity-30">/</span>
-                      <span>{selectedIdea?.sector}</span>
-                    </div>
                   </header>
-                  <section className="grid lg:grid-cols-3 gap-20">
-                    <div className="lg:col-span-2 space-y-20">
+                  <section className="space-y-20">
                       <article>
                         <h3 className="text-3xl font-black text-[#1E1B4B] mb-8 flex items-center">
                           <span className="w-12 h-12 bg-[#B4975A] text-white rounded-2xl flex items-center justify-center mr-4 ml-4 text-sm shadow-lg">01</span>
@@ -421,21 +410,17 @@ const App: React.FC = () => {
                         </h3>
                         <p className="text-slate-700 leading-relaxed text-justify text-2xl font-medium">{proposal.executiveSummary}</p>
                       </article>
-                    </div>
                   </section>
                 </div>
               ) : (
-                <div className="space-y-20 animate-in slide-in-from-left-10 duration-700">
+                <div className="space-y-20">
                   <header className="text-center pb-16 border-b-4 border-slate-50">
                     <h2 className="text-5xl font-black text-[#1E1B4B] mb-4">{t.budgetEdit}</h2>
                   </header>
                   <div className="bg-[#1E1B4B] text-white p-24 rounded-[5rem] text-center shadow-2xl relative overflow-hidden border-t-8 border-t-[#B4975A]">
-                    <div className="relative z-10">
-                       <p className="text-[#B4975A] font-black mb-8 uppercase tracking-[0.5em] text-sm">{lang === 'ar' ? 'إجمالي المنحة المطلوبة' : 'Total Grant Requested'}</p>
-                       <p className="text-8xl font-black mb-10 tracking-tighter text-white">
-                         ${(proposal?.budget || []).reduce((s: number, i: BudgetItem) => s + i.total, 0).toLocaleString()}
-                       </p>
-                    </div>
+                    <p className="text-8xl font-black mb-10 tracking-tighter text-white">
+                      ${(proposal?.budget || []).reduce((s: number, i: BudgetItem) => s + i.total, 0).toLocaleString()}
+                    </p>
                   </div>
                 </div>
               )}
