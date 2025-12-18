@@ -2,17 +2,22 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { ProjectIdea, ProjectProposal } from "../types";
 
-// محاولة جلب المفتاح من بيئات مختلفة (Vite أو Process)
-const getApiKey = () => {
-  return (import.meta as any).env?.VITE_API_KEY || process.env.API_KEY;
+// محاولة جلب المفتاح من كافة البيئات الممكنة
+export const getApiKey = () => {
+  // في Vite/Cloudflare Pages نستخدم import.meta.env
+  const viteKey = (import.meta as any).env?.VITE_API_KEY;
+  // في بعض البيئات الأخرى نستخدم process.env
+  const processKey = typeof process !== 'undefined' ? process.env?.API_KEY : '';
+  
+  return viteKey || processKey || "";
 };
 
 const getAIClient = () => {
   const apiKey = getApiKey();
   if (!apiKey) {
-    console.error("API Key is missing!");
+    throw new Error("Missing API Key");
   }
-  return new GoogleGenAI({ apiKey: apiKey || "" });
+  return new GoogleGenAI({ apiKey });
 };
 
 export const generateProjectIdeas = async (vision: string, country: string, lang: 'ar' | 'en'): Promise<ProjectIdea[]> => {
