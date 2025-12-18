@@ -2,23 +2,35 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { ProjectIdea, ProjectProposal } from "../types.ts";
 
-// محاولة جلب المفتاح من كافة البيئات الممكنة
 export const getApiKey = () => {
-  const viteKey = (import.meta as any).env?.VITE_API_KEY;
-  const processKey = typeof process !== 'undefined' ? (process as any).env?.API_KEY : '';
-  return viteKey || processKey || "";
+  try {
+    // محاولة جلب المفتاح من Vite
+    const viteKey = (import.meta as any).env?.VITE_API_KEY;
+    if (viteKey) return viteKey;
+
+    // محاولة جلب المفتاح من process.env (Cloudflare)
+    if (typeof process !== 'undefined' && process.env) {
+      return (process.env as any).API_KEY || (process.env as any).VITE_API_KEY || "";
+    }
+  } catch (e) {
+    console.warn("ATHAR: Error accessing environment variables", e);
+  }
+  return "";
 };
 
 const getAIClient = () => {
   const apiKey = getApiKey();
   if (!apiKey) {
-    throw new Error("Missing API Key");
+    // لا نرمي خطأ هنا، بل نترك التطبيق يظهر واجهة الإعداد
+    return null;
   }
   return new GoogleGenAI({ apiKey });
 };
 
 export const generateProjectIdeas = async (vision: string, country: string, lang: 'ar' | 'en'): Promise<ProjectIdea[]> => {
   const ai = getAIClient();
+  if (!ai) throw new Error("API Key required");
+
   const prompt = lang === 'ar' 
     ? `أنت خبير دولي في كتابة مقترحات المشاريع. بناءً على الرؤية: "${vision}" والبلد: "${country}". قم بتوليد 4 أفكار مشاريع مبتكرة وواقعية جداً. الرد JSON حصراً بالعربية.`
     : `You are an international project proposal expert. Based on vision: "${vision}" and country: "${country}". Generate 4 highly innovative and realistic project ideas. Response must be JSON in English only.`;
@@ -61,9 +73,7 @@ export const generateFullProposal = async (
   customCategories?: string[]
 ): Promise<ProjectProposal> => {
   const ai = getAIClient();
-  const categories = customCategories && customCategories.length > 0 
-    ? customCategories.join(", ")
-    : (lang === 'ar' ? "الموظفين، المشتريات، المواصلات، الأنشطة، الإدارة" : "Staff, Procurement, Transport, Activities, Management");
+  if (!ai) throw new Error("API Key required");
 
   const prompt = lang === 'ar'
     ? `أنت كبير مستشاري المنظمات الدولية. صغ مقترحاً احترافياً "كاملاً" لفكرة: "${selectedIdea.name}" في "${country}". الرد JSON حصراً بالعربية.`
