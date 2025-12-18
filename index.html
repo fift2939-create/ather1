@@ -1,53 +1,86 @@
-
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>أثر | ATHAR - لأن التغيير يبدأ بخطة</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap"
+        rel="stylesheet">
     <style>
-        :root { --athar-navy: #1E1B4B; --athar-gold: #B4975A; }
-        body { font-family: 'Tajawal', sans-serif; background: #f8f9fa; margin: 0; }
-        #error-display { display: none; padding: 20px; color: red; font-family: monospace; background: #fff1f1; border: 2px solid red; margin: 20px; border-radius: 10px; z-index: 9999; position: relative; }
-        .glass-card { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border: 1px solid rgba(180, 151, 90, 0.2); }
-        .slogan-glow { background: linear-gradient(to right, #B4975A, #D4C39D, #B4975A); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        :root {
+            --athar-navy: #1E1B4B;
+            --athar-gold: #B4975A;
+        }
+
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: #f8f9fa;
+            margin: 0;
+        }
+
+        #error-display {
+            display: none;
+            padding: 30px;
+            color: #721c24;
+            background: #f8d7da;
+            border: 2px solid #f5c6cb;
+            margin: 20px;
+            border-radius: 15px;
+            font-family: 'Tajawal', sans-serif;
+            text-align: center;
+        }
+
+        .error-title {
+            font-weight: 800;
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+
+        .error-hint {
+            font-size: 0.9rem;
+            margin-top: 15px;
+            color: #1e1b4b;
+        }
     </style>
     <script>
-        // تعريف shim لـ process لتجنب أخطاء المكتبات التي تعتمد عليه
-        window.process = { env: { NODE_ENV: 'production' } };
+        // تعريف shim لتجنب أخطاء المكتبات
+        window.process = { env: { NODE_ENV: 'development' } };
         window.global = window;
-        
-        window.onerror = function(msg, url, line, col, error) {
-            console.error("Global Error Caught:", msg, error);
+
+        window.onerror = function (msg, url, line, col, error) {
             var display = document.getElementById('error-display');
             if (display) {
                 display.style.display = 'block';
-                display.innerHTML = '<h4>حدث خطأ فني:</h4>' + msg + '<br><small>' + (error ? error.stack : '') + '</small>';
+                display.innerHTML = '<div class="error-title">حدث خطأ أثناء تحميل التطبيق</div>' +
+                    '<p>' + msg + '</p>' +
+                    '<div class="error-hint">تأكد من تشغيل المشروع عبر أمر <code>npm run dev</code> وليس بفتح الملف مباشرة.</div>';
             }
             return false;
         };
+
+        // تنبيه في حالة فتح الملف مباشرة
+        if (window.location.protocol === 'file:') {
+            window.addEventListener('load', function () {
+                var display = document.getElementById('error-display');
+                if (display) {
+                    display.style.display = 'block';
+                    display.innerHTML = '<div class="error-title">تنبيه: لا يمكن تشغيل التطبيق بفتح الملف مباشرة</div>' +
+                        '<p>يجب تشغيل المشروع باستخدام سيرفر محلي (مثل Vite).</p>' +
+                        '<div class="error-hint">يرجى اتباع الخطوات التالية:<br>1. افتح التيرمنال في مجلد المشروع.<br>2. اكتب <code>npm install</code> (للمرة الأولى فقط).<br>3. اكتب <code>npm run dev</code> للتشغيل.</div>';
+                }
+            });
+        }
     </script>
-    <script type="importmap">
-    {
-      "imports": {
-        "react": "https://esm.sh/react@18.2.0",
-        "react/": "https://esm.sh/react@18.2.0/",
-        "react-dom": "https://esm.sh/react-dom@18.2.0",
-        "react-dom/": "https://esm.sh/react-dom@18.2.0/",
-        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-        "@google/genai": "https://esm.sh/@google/genai@1.3.0",
-        "docx": "https://esm.sh/docx@8.2.2",
-        "file-saver": "https://esm.sh/file-saver@2.0.5",
-        "xlsx": "https://esm.sh/xlsx@0.18.5"
-      }
-    }
-    </script>
+  <script type="module" crossorigin src="./assets/index-DKab_EuH.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-CldP_XC6.css">
 </head>
+
 <body>
     <div id="error-display"></div>
     <div id="root"></div>
-    <script type="module" src="./index.tsx"></script>
+    <!-- استخدام ملف واحد فقط وبمسار نسبي لضمان التوافق مع Vite -->
 </body>
+
 </html>
