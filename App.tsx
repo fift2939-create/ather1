@@ -27,6 +27,7 @@ const App: React.FC = () => {
   const [hasKey, setHasKey] = useState<boolean>(true);
 
   const [customCategories, setCustomCategories] = useState<string[]>([]);
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     try {
@@ -77,7 +78,9 @@ const App: React.FC = () => {
       setupStep2: "2. اضغط على تبويب Settings في الأعلى.",
       setupStep3: "3. اختر Environment variables من القائمة اليسرى.",
       setupStep4: "4. اضغط Add Variable تحت قسم Production وأضف VITE_API_KEY.",
-      setupStep5: "5. هام: اذهب لتبويب Deployments واضغط Retry Deployment ليتفعل المفتاح."
+      setupStep5: "5. هام: اذهب لتبويب Deployments واضغط Retry Deployment ليتفعل المفتاح.",
+      settings: "إعدادات الذكاء الاصطناعي ⚙️",
+      close: "إغلاق"
     },
     en: {
       welcome: "Welcome to ATHAR Architect",
@@ -118,7 +121,9 @@ const App: React.FC = () => {
       setupStep2: "2. Click the 'Settings' tab at the top.",
       setupStep3: "3. Select 'Environment variables' from left menu.",
       setupStep4: "4. Click 'Add Variable' in Production and add VITE_API_KEY.",
-      setupStep5: "5. Important: Go to 'Deployments' and click 'Retry Deployment'."
+      setupStep5: "5. Important: Go to 'Deployments' and click 'Retry Deployment'.",
+      settings: "AI Settings ⚙️",
+      close: "Close"
     }
   }[lang];
 
@@ -259,20 +264,19 @@ const App: React.FC = () => {
   };
 
   if (!hasKey) {
-    const [provider, setProvider] = useState<AIProvider>('openai');
-    const [inputKey, setInputKey] = useState('');
-    const [inputBridge, setInputBridge] = useState('');
+    const [provider, setProvider] = useState<AIProvider>((localStorage.getItem('ATHAR_AI_PROVIDER') as AIProvider) || 'openai');
+    const [inputKey, setInputKey] = useState(localStorage.getItem('ATHAR_API_KEY') || '');
+    const [inputBridge, setInputBridge] = useState(localStorage.getItem('ATHAR_BRIDGE_URL') || '');
 
     const [testStatus, setTestStatus] = useState<{ loading: boolean; msg: string; success?: boolean }>({ loading: false, msg: '' });
 
     const handleTestConnection = async () => {
       if (inputKey.trim().length < 5) {
-        setTestStatus({ loading: false, msg: 'يرجى إدخال مفتاح أولاً', success: false });
+        setTestStatus({ loading: false, msg: lang === 'ar' ? 'يرجى إدخال مفتاح أولاً' : 'Enter key first', success: false });
         return;
       }
-      setTestStatus({ loading: true, msg: 'جاري الاختبار...' });
+      setTestStatus({ loading: true, msg: lang === 'ar' ? 'جاري الاختبار...' : 'Testing...' });
 
-      // Save temporarily to let the service read it
       const oldKey = localStorage.getItem('ATHAR_API_KEY');
       const oldProv = localStorage.getItem('ATHAR_AI_PROVIDER');
       const oldBridge = localStorage.getItem('ATHAR_BRIDGE_URL');
@@ -284,13 +288,15 @@ const App: React.FC = () => {
 
       try {
         await generateProjectIdeas("test", "test", 'en');
-        setTestStatus({ loading: false, msg: 'تم الاتصال بنجاح! ✅', success: true });
+        setTestStatus({ loading: false, msg: lang === 'ar' ? 'تم الاتصال بنجاح! ✅' : 'Connected! ✅', success: true });
       } catch (e: any) {
-        setTestStatus({ loading: false, msg: `فشل: ${e.message}`, success: false });
-        // Restore old values if test fails
+        setTestStatus({ loading: false, msg: `${lang === 'ar' ? 'فشل' : 'Failed'}: ${e.message}`, success: false });
         if (oldKey) localStorage.setItem('ATHAR_API_KEY', oldKey);
+        else localStorage.removeItem('ATHAR_API_KEY');
         if (oldProv) localStorage.setItem('ATHAR_AI_PROVIDER', oldProv);
+        else localStorage.removeItem('ATHAR_AI_PROVIDER');
         if (oldBridge) localStorage.setItem('ATHAR_BRIDGE_URL', oldBridge);
+        else localStorage.removeItem('ATHAR_BRIDGE_URL');
       }
     };
 
@@ -300,118 +306,132 @@ const App: React.FC = () => {
         localStorage.setItem('ATHAR_AI_PROVIDER', provider);
         if (inputBridge.trim()) {
           localStorage.setItem('ATHAR_BRIDGE_URL', inputBridge.trim());
+        } else {
+          localStorage.removeItem('ATHAR_BRIDGE_URL');
         }
         setHasKey(true);
-        window.location.reload();
+        setShowSettings(false);
+        if (!showSettings) window.location.reload();
       } else {
         alert(lang === 'ar' ? 'يرجى إدخال مفتاح صحيح' : 'Please enter a valid key');
       }
     };
 
-    return (
-      <Layout>
-        <div className="max-w-4xl mx-auto py-20 px-6">
-          <div className="glass-card rounded-[3rem] p-12 md:p-20 border-t-8 border-[#B4975A] shadow-2xl animate-in zoom-in-95 duration-500">
-            <div className="flex flex-col items-center text-center">
-              <div className="w-24 h-24 bg-indigo-50 rounded-full flex items-center justify-center mb-10 border-2 border-indigo-100">
-                <span className="text-4xl">🤖</span>
+    const settingsContent = (
+      <div className={`${showSettings ? 'fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm' : ''}`}>
+        <div className="glass-card rounded-[3rem] p-12 md:p-16 border-t-8 border-[#B4975A] shadow-2xl animate-in zoom-in-95 duration-500 w-full max-w-2xl bg-white max-h-[90vh] overflow-y-auto">
+          <div className="flex flex-col items-center text-center">
+            <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center mb-6 border-2 border-indigo-100">
+              <span className="text-3xl">🤖</span>
+            </div>
+            <h2 className="text-3xl font-black text-[#1E1B4B] mb-6">
+              {lang === 'ar' ? 'إعدادات محرك الذكاء الاصطناعي' : 'AI Engine Setup'}
+            </h2>
+
+            <div className="w-full space-y-6">
+              <div className="text-right">
+                <label className="text-xs font-black text-slate-400 mr-2">مزود الخدمة</label>
+                <div className="grid grid-cols-2 gap-3 mt-2">
+                  {[
+                    { id: 'openai', name: 'ChatGPT (OpenAI)', icon: '✨' },
+                    { id: 'gemini', name: 'Google Gemini', icon: '💎' },
+                    { id: 'groq', name: 'Groq (سريع جداً)', icon: '⚡' },
+                    { id: 'openrouter', name: 'OpenRouter', icon: '🌐' }
+                  ].map(p => (
+                    <button
+                      key={p.id}
+                      onClick={() => setProvider(p.id as AIProvider)}
+                      className={`p-4 rounded-xl border-2 font-bold text-sm transition-all flex items-center justify-center gap-2 ${provider === p.id
+                        ? 'border-[#B4975A] bg-[#B4975A]/5 text-[#1E1B4B]'
+                        : 'border-slate-100 text-slate-400 hover:border-slate-200'
+                        }`}
+                    >
+                      <span>{p.icon}</span>
+                      {p.name}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <h2 className="text-4xl font-black text-[#1E1B4B] mb-6">
-                {lang === 'ar' ? 'إعداد محرك الذكاء الاصطناعي' : 'AI Engine Setup'}
-              </h2>
 
-              <div className="w-full max-w-md mb-12 space-y-6">
-                <div className="text-right">
-                  <label className="text-xs font-black text-slate-400 mr-2">مزود الخدمة</label>
-                  <div className="grid grid-cols-2 gap-3 mt-2">
-                    {[
-                      { id: 'openai', name: 'ChatGPT (OpenAI)', icon: '✨' },
-                      { id: 'gemini', name: 'Google Gemini', icon: '💎' },
-                      { id: 'groq', name: 'Groq (سريع جداً)', icon: '⚡' },
-                      { id: 'openrouter', name: 'OpenRouter', icon: '🌐' }
-                    ].map(p => (
-                      <button
-                        key={p.id}
-                        onClick={() => setProvider(p.id as AIProvider)}
-                        className={`p-4 rounded-xl border-2 font-bold text-sm transition-all flex items-center justify-center gap-2 ${provider === p.id
-                          ? 'border-[#B4975A] bg-[#B4975A]/5 text-[#1E1B4B]'
-                          : 'border-slate-100 text-slate-400 hover:border-slate-200'
-                          }`}
-                      >
-                        <span>{p.icon}</span>
-                        {p.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+              <div className="text-right">
+                <label className="text-xs font-black text-slate-400 mr-2">مفتاح API الخاص بك</label>
+                <input
+                  type="password"
+                  value={inputKey}
+                  onChange={(e) => setInputKey(e.target.value)}
+                  placeholder={provider === 'openai' ? 'sk-...' : 'AIzaSy...'}
+                  className="w-full px-6 py-4 rounded-xl border-2 border-slate-200 focus:border-[#B4975A] outline-none font-mono text-center mt-2"
+                />
+              </div>
 
+              {provider === 'gemini' && (
                 <div className="text-right">
-                  <label className="text-xs font-black text-slate-400 mr-2">مفتاح API الخاص بك</label>
+                  <label className="text-xs font-black text-slate-400 mr-2">رابط الجسر (اختياري لفك الحظر)</label>
                   <input
-                    type="password"
-                    value={inputKey}
-                    onChange={(e) => setInputKey(e.target.value)}
-                    placeholder={provider === 'openai' ? 'sk-...' : 'AIzaSy...'}
-                    className="w-full px-6 py-4 rounded-xl border-2 border-slate-200 focus:border-[#B4975A] outline-none font-mono text-center mt-2"
+                    type="text"
+                    value={inputBridge}
+                    onChange={(e) => setInputBridge(e.target.value)}
+                    placeholder="https://script.google.com/..."
+                    className="w-full px-6 py-4 rounded-xl border-2 border-slate-200 focus:border-[#B4975A] outline-none font-mono text-center text-sm mt-2"
                   />
-                  <p className="text-[10px] text-slate-400 mt-2 font-bold">
-                    {provider === 'openai' ? 'ملاحظة: يتطلب رصيد مشحون في OpenAI' : 'ملاحظة: مفتاح Gemini مجاني لعدد معين من الطلبات'}
-                  </p>
                 </div>
+              )}
 
-                {provider === 'gemini' && (
-                  <div className="text-right">
-                    <label className="text-xs font-black text-slate-400 mr-2">رابط الجسر (اختياري لفك الحظر)</label>
-                    <input
-                      type="text"
-                      value={inputBridge}
-                      onChange={(e) => setInputBridge(e.target.value)}
-                      placeholder="https://script.google.com/..."
-                      className="w-full px-6 py-4 rounded-xl border-2 border-slate-200 focus:border-[#B4975A] outline-none font-mono text-center text-sm mt-2"
-                    />
-                  </div>
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={handleTestConnection}
+                  disabled={testStatus.loading}
+                  className={`w-full py-4 rounded-xl font-bold transition-all border-2 ${testStatus.success === true ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
+                    testStatus.success === false ? 'bg-red-50 border-red-200 text-red-700' :
+                      'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                >
+                  {testStatus.loading ? '⏳ ...' : lang === 'ar' ? '🔍 اختبار الاتصال الآن' : '🔍 Test Connection'}
+                </button>
+
+                {testStatus.msg && (
+                  <p className={`text-[10px] font-bold text-center ${testStatus.success ? 'text-emerald-600' : 'text-red-500'}`}>
+                    {testStatus.msg}
+                  </p>
                 )}
 
-                <div className="flex flex-col gap-3">
-                  <button
-                    onClick={handleTestConnection}
-                    disabled={testStatus.loading}
-                    className={`w-full py-4 rounded-xl font-bold transition-all border-2 ${testStatus.success === true ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
-                        testStatus.success === false ? 'bg-red-50 border-red-200 text-red-700' :
-                          'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                      }`}
-                  >
-                    {testStatus.loading ? '⏳ جاري الاختبار...' : '🔍 اختبار الاتصال الآن'}
-                  </button>
-
-                  {testStatus.msg && (
-                    <p className={`text-[10px] font-bold text-center ${testStatus.success ? 'text-emerald-600' : 'text-red-500'}`}>
-                      {testStatus.msg}
-                    </p>
-                  )}
-
+                <div className="grid grid-cols-2 gap-3 mt-4">
                   <button
                     onClick={handleSaveKey}
-                    className="w-full bg-[#1E1B4B] text-white py-5 rounded-2xl font-black shadow-xl hover:bg-[#2D2A5E] transition-all transform hover:scale-[1.02] active:scale-95 border-b-4 border-[#B4975A]"
+                    className="w-full bg-[#1E1B4B] text-white py-4 rounded-2xl font-black shadow-xl hover:bg-[#2D2A5E] transition-all"
                   >
-                    حفظ الإعدادات والبدء 🚀
+                    {lang === 'ar' ? 'حفظ ✅' : 'Save ✅'}
+                  </button>
+                  <button
+                    onClick={() => setShowSettings(false)}
+                    className="w-full bg-slate-100 text-slate-600 py-4 rounded-2xl font-black hover:bg-slate-200 transition-all"
+                  >
+                    {lang === 'ar' ? 'إغلاق' : 'Close'}
                   </button>
                 </div>
-              </div>
-
-              <div className="w-full text-right space-y-3 bg-slate-50 p-6 rounded-2xl border border-slate-200 text-xs">
-                <p className="font-bold text-slate-600">
-                  {lang === 'ar'
-                    ? '💡 نصيحة: إذا كنت تواجه مشاكل في اتصال Gemini ببلدك، نوصي باستخدام ChatGPT (OpenAI) أو استخدام رابط الجسر (Bridge).'
-                    : '💡 Tip: If you face Gemini connection issues, try OpenAI or use a Bridge URL.'}
-                </p>
               </div>
             </div>
           </div>
         </div>
-      </Layout>
+      </div>
     );
-  }
+
+    if (!hasKey) {
+      return (
+        <Layout>
+          {settingsContent}
+        </Layout>
+      );
+    }
+
+    return (
+      <>
+        {showSettings && settingsContent}
+      </>
+    );
+  };
+
+  const SettingsModal = RenderSettings();
 
 
   if (loading) {
@@ -428,7 +448,13 @@ const App: React.FC = () => {
   return (
     <Layout>
       <div className="max-w-6xl mx-auto py-8">
-        <div className="flex justify-end mb-6 no-print">
+        <div className="flex justify-end mb-6 no-print items-center gap-4">
+          <button
+            onClick={() => setShowSettings(true)}
+            className="bg-[#1E1B4B] text-white px-6 py-3 rounded-2xl shadow-lg font-black text-sm hover:bg-[#2D2A5E] transition-all transform hover:scale-105"
+          >
+            {t.settings}
+          </button>
           <button
             onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')}
             className="bg-white/90 backdrop-blur px-8 py-3 rounded-2xl shadow-md border border-[#B4975A]/20 font-black text-[#1E1B4B] hover:bg-[#B4975A] hover:text-white transition-all transform hover:scale-105 active:scale-95"
@@ -436,6 +462,8 @@ const App: React.FC = () => {
             {t.lang}
           </button>
         </div>
+
+        {SettingsModal}
 
         {step === Step.Input && (
           <div className="space-y-10 animate-in fade-in duration-700">
