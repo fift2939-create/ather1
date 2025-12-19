@@ -72,3 +72,5 @@ export enum Step {
   Ideas = 2,
   Proposal = 3
 }
+
+export type AIProvider = 'gemini' | 'openai' | 'groq' | 'openrouter';

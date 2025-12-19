@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Layout } from './components/Layout.tsx';
-import { Step, ProjectIdea, ProjectProposal, BudgetItem } from './types.ts';
+import { Step, ProjectIdea, ProjectProposal, BudgetItem, AIProvider } from './types.ts';
 import { generateProjectIdeas, generateFullProposal, getApiKey } from './services/geminiService.ts';
 import * as docx from "docx";
 import FileSaver from "file-saver";
@@ -139,7 +139,9 @@ const App: React.FC = () => {
       const suggestedIdeas = await generateProjectIdeas(vision, country, lang);
       setIdeas(suggestedIdeas);
       setStep(Step.Ideas);
-    } catch (error) { alert(lang === 'ar' ? 'خطأ في الاتصال بمحرك الذكاء الاصطناعي' : 'AI Engine Connection Error'); }
+    } catch (error: any) {
+      alert(error.message || (lang === 'ar' ? 'خطأ في الاتصال بمحرك الذكاء الاصطناعي' : 'AI Engine Connection Error'));
+    }
     finally { setLoading(false); }
   };
 
@@ -148,10 +150,12 @@ const App: React.FC = () => {
     setLoading(true);
     setLoadingMessage(t.loadingProposal);
     try {
-      const fullProposal = await generateFullProposal(idea, country, lang, customCategories);
+      const fullProposal = await generateFullProposal(idea, country, lang);
       setProposal(fullProposal);
       setStep(Step.Proposal);
-    } catch (error) { alert(lang === 'ar' ? 'خطأ في صياغة المقترح' : 'Drafting Error'); }
+    } catch (error: any) {
+      alert(error.message || (lang === 'ar' ? 'خطأ في صياغة المقترح' : 'Drafting Error'));
+    }
     finally { setLoading(false); }
   };
 
@@ -255,11 +259,48 @@ const App: React.FC = () => {
   };
 
   if (!hasKey) {
+    const [provider, setProvider] = useState<AIProvider>('openai');
     const [inputKey, setInputKey] = useState('');
+    const [inputBridge, setInputBridge] = useState('');
+
+    const [testStatus, setTestStatus] = useState<{ loading: boolean; msg: string; success?: boolean }>({ loading: false, msg: '' });
+
+    const handleTestConnection = async () => {
+      if (inputKey.trim().length < 5) {
+        setTestStatus({ loading: false, msg: 'يرجى إدخال مفتاح أولاً', success: false });
+        return;
+      }
+      setTestStatus({ loading: true, msg: 'جاري الاختبار...' });
+
+      // Save temporarily to let the service read it
+      const oldKey = localStorage.getItem('ATHAR_API_KEY');
+      const oldProv = localStorage.getItem('ATHAR_AI_PROVIDER');
+      const oldBridge = localStorage.getItem('ATHAR_BRIDGE_URL');
+
+      localStorage.setItem('ATHAR_API_KEY', inputKey.trim());
+      localStorage.setItem('ATHAR_AI_PROVIDER', provider);
+      if (inputBridge.trim()) localStorage.setItem('ATHAR_BRIDGE_URL', inputBridge.trim());
+      else localStorage.removeItem('ATHAR_BRIDGE_URL');
+
+      try {
+        await generateProjectIdeas("test", "test", 'en');
+        setTestStatus({ loading: false, msg: 'تم الاتصال بنجاح! ✅', success: true });
+      } catch (e: any) {
+        setTestStatus({ loading: false, msg: `فشل: ${e.message}`, success: false });
+        // Restore old values if test fails
+        if (oldKey) localStorage.setItem('ATHAR_API_KEY', oldKey);
+        if (oldProv) localStorage.setItem('ATHAR_AI_PROVIDER', oldProv);
+        if (oldBridge) localStorage.setItem('ATHAR_BRIDGE_URL', oldBridge);
+      }
+    };
 
     const handleSaveKey = () => {
-      if (inputKey.trim().length > 10) {
+      if (inputKey.trim().length > 5) {
         localStorage.setItem('ATHAR_API_KEY', inputKey.trim());
+        localStorage.setItem('ATHAR_AI_PROVIDER', provider);
+        if (inputBridge.trim()) {
+          localStorage.setItem('ATHAR_BRIDGE_URL', inputBridge.trim());
+        }
         setHasKey(true);
         window.location.reload();
       } else {
@@ -272,49 +313,99 @@ const App: React.FC = () => {
         <div className="max-w-4xl mx-auto py-20 px-6">
           <div className="glass-card rounded-[3rem] p-12 md:p-20 border-t-8 border-[#B4975A] shadow-2xl animate-in zoom-in-95 duration-500">
             <div className="flex flex-col items-center text-center">
-              <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center mb-10 border-2 border-red-100">
-                <span className="text-4xl">🔑</span>
+              <div className="w-24 h-24 bg-indigo-50 rounded-full flex items-center justify-center mb-10 border-2 border-indigo-100">
+                <span className="text-4xl">🤖</span>
               </div>
-              <h2 className="text-4xl font-black text-[#1E1B4B] mb-6">{t.setupRequired}</h2>
+              <h2 className="text-4xl font-black text-[#1E1B4B] mb-6">
+                {lang === 'ar' ? 'إعداد محرك الذكاء الاصطناعي' : 'AI Engine Setup'}
+              </h2>
 
-              <div className="w-full max-w-md mb-12">
-                <input
-                  type="password"
-                  value={inputKey}
-                  onChange={(e) => setInputKey(e.target.value)}
-                  placeholder={lang === 'ar' ? "أدخل مفتاح الـ API هنا..." : "Enter API Key here..."}
-                  className="w-full px-6 py-4 rounded-xl border-2 border-slate-200 focus:border-[#B4975A] outline-none mb-4 font-mono text-center"
-                />
-                <button
-                  onClick={handleSaveKey}
-                  className="w-full bg-[#B4975A] text-white py-4 rounded-xl font-black shadow-lg hover:brightness-110 mb-4"
-                >
-                  حفظ المفتاح ومتابعة ✅
-                </button>
+              <div className="w-full max-w-md mb-12 space-y-6">
+                <div className="text-right">
+                  <label className="text-xs font-black text-slate-400 mr-2">مزود الخدمة</label>
+                  <div className="grid grid-cols-2 gap-3 mt-2">
+                    {[
+                      { id: 'openai', name: 'ChatGPT (OpenAI)', icon: '✨' },
+                      { id: 'gemini', name: 'Google Gemini', icon: '💎' },
+                      { id: 'groq', name: 'Groq (سريع جداً)', icon: '⚡' },
+                      { id: 'openrouter', name: 'OpenRouter', icon: '🌐' }
+                    ].map(p => (
+                      <button
+                        key={p.id}
+                        onClick={() => setProvider(p.id as AIProvider)}
+                        className={`p-4 rounded-xl border-2 font-bold text-sm transition-all flex items-center justify-center gap-2 ${provider === p.id
+                          ? 'border-[#B4975A] bg-[#B4975A]/5 text-[#1E1B4B]'
+                          : 'border-slate-100 text-slate-400 hover:border-slate-200'
+                          }`}
+                      >
+                        <span>{p.icon}</span>
+                        {p.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <label className="text-xs font-black text-slate-400 mr-2">مفتاح API الخاص بك</label>
+                  <input
+                    type="password"
+                    value={inputKey}
+                    onChange={(e) => setInputKey(e.target.value)}
+                    placeholder={provider === 'openai' ? 'sk-...' : 'AIzaSy...'}
+                    className="w-full px-6 py-4 rounded-xl border-2 border-slate-200 focus:border-[#B4975A] outline-none font-mono text-center mt-2"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-2 font-bold">
+                    {provider === 'openai' ? 'ملاحظة: يتطلب رصيد مشحون في OpenAI' : 'ملاحظة: مفتاح Gemini مجاني لعدد معين من الطلبات'}
+                  </p>
+                </div>
+
+                {provider === 'gemini' && (
+                  <div className="text-right">
+                    <label className="text-xs font-black text-slate-400 mr-2">رابط الجسر (اختياري لفك الحظر)</label>
+                    <input
+                      type="text"
+                      value={inputBridge}
+                      onChange={(e) => setInputBridge(e.target.value)}
+                      placeholder="https://script.google.com/..."
+                      className="w-full px-6 py-4 rounded-xl border-2 border-slate-200 focus:border-[#B4975A] outline-none font-mono text-center text-sm mt-2"
+                    />
+                  </div>
+                )}
+
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={handleTestConnection}
+                    disabled={testStatus.loading}
+                    className={`w-full py-4 rounded-xl font-bold transition-all border-2 ${testStatus.success === true ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
+                        testStatus.success === false ? 'bg-red-50 border-red-200 text-red-700' :
+                          'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                  >
+                    {testStatus.loading ? '⏳ جاري الاختبار...' : '🔍 اختبار الاتصال الآن'}
+                  </button>
+
+                  {testStatus.msg && (
+                    <p className={`text-[10px] font-bold text-center ${testStatus.success ? 'text-emerald-600' : 'text-red-500'}`}>
+                      {testStatus.msg}
+                    </p>
+                  )}
+
+                  <button
+                    onClick={handleSaveKey}
+                    className="w-full bg-[#1E1B4B] text-white py-5 rounded-2xl font-black shadow-xl hover:bg-[#2D2A5E] transition-all transform hover:scale-[1.02] active:scale-95 border-b-4 border-[#B4975A]"
+                  >
+                    حفظ الإعدادات والبدء 🚀
+                  </button>
+                </div>
               </div>
 
-              <p className="text-slate-500 text-sm font-bold mb-8 max-w-xl">{t.setupDesc}</p>
-
-              <div className="w-full text-right space-y-4 bg-slate-50 p-8 rounded-[2rem] border border-slate-200 text-sm">
-                <p className="font-black text-[#1E1B4B] flex items-center gap-3">
-                  <span className="bg-[#B4975A] text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">1</span>
-                  {t.setupStep1}
-                </p>
-                <p className="font-black text-[#1E1B4B] flex items-center gap-3">
-                  <span className="bg-[#B4975A] text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">2</span>
-                  {t.setupStep2}
-                </p>
-                <p className="font-black text-[#1E1B4B] flex items-center gap-3 text-xs opacity-70">
-                  {t.setupStep3} (VITE_API_KEY)
+              <div className="w-full text-right space-y-3 bg-slate-50 p-6 rounded-2xl border border-slate-200 text-xs">
+                <p className="font-bold text-slate-600">
+                  {lang === 'ar'
+                    ? '💡 نصيحة: إذا كنت تواجه مشاكل في اتصال Gemini ببلدك، نوصي باستخدام ChatGPT (OpenAI) أو استخدام رابط الجسر (Bridge).'
+                    : '💡 Tip: If you face Gemini connection issues, try OpenAI or use a Bridge URL.'}
                 </p>
               </div>
-
-              <button
-                onClick={() => window.location.reload()}
-                className="mt-12 text-[#1E1B4B] font-black underline"
-              >
-                تحديث الصفحة ↻
-              </button>
             </div>
           </div>
         </div>
